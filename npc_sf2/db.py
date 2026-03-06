@@ -1,8 +1,11 @@
+import os
 import sqlite3
 
 SYSTEM_NAME = "NPC_SF2"
 
-conn = sqlite3.connect("accounts.db", check_same_thread=False)
+# Each app has its own database (bidirectional CDC with 2 separate data stores)
+_db_path = os.path.join(os.path.dirname(__file__), "npc_sf2_accounts.db")
+conn = sqlite3.connect(_db_path, check_same_thread=False)
 cursor = conn.cursor()
 
 
@@ -14,24 +17,33 @@ def init_db():
         last_name TEXT,
         email TEXT,
         phone TEXT,
-        source_system TEXT
+        source_system TEXT,
+        created_by TEXT
     )
     """)
+    # Add created_by column if table already existed without it
+    try:
+        cursor.execute("ALTER TABLE accounts ADD COLUMN created_by TEXT")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # Column already exists
     conn.commit()
 
 
-def insert_account(account_id, first, last, email, phone, source):
+def insert_account(account_id, first, last, email, phone, source, created_by="database"):
 
     cursor.execute("""
     INSERT OR IGNORE INTO accounts
-    VALUES (?, ?, ?, ?, ?, ?)
+    (account_id, first_name, last_name, email, phone, source_system, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
     """, (
         account_id,
         first,
         last,
         email,
         phone,
-        source
+        source,
+        created_by,
     ))
 
     conn.commit()

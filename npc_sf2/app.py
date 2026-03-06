@@ -2,7 +2,7 @@ from flask import Flask, request, render_template_string
 import uuid
 
 from db import init_db, insert_account, get_accounts
-from grpc_client import send_account
+from publisher2 import send_account
 
 SYSTEM_NAME = "NPC_SF2"
 
@@ -42,6 +42,7 @@ Phone:<br>
 <th>Email</th>
 <th>Phone</th>
 <th>Source</th>
+<th>Created by</th>
 </tr>
 
 {% for acc in accounts %}
@@ -52,6 +53,7 @@ Phone:<br>
 <td>{{acc[3]}}</td>
 <td>{{acc[4]}}</td>
 <td>{{acc[5]}}</td>
+<td>{{acc[6] or '—'}}</td>
 </tr>
 {% endfor %}
 
@@ -76,14 +78,15 @@ def create():
     # Generate unique ID (shared across systems)
     account_id = str(uuid.uuid4())
 
-    # Save locally
+    # Save locally (created via form → database)
     insert_account(
         account_id,
         first,
         last,
         email,
         phone,
-        SYSTEM_NAME
+        SYSTEM_NAME,
+        created_by="database",
     )
 
     # Send to other system via gRPC

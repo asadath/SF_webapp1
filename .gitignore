@@ -13,3 +13,6 @@ __pycache__/
 
 # OS files
 .DS_Store
+
+# SQLite databases (each app has its own DB)
+*.db

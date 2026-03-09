@@ -14,7 +14,11 @@ from proto import pubsub_pb2_grpc
 
 # Allow importing nsps_sf1.db from sibling folder
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from nsps_sf1.db import insert_account as insert_account_sf1
+from nsps_sf1.db import (
+    insert_account as insert_account_sf1,
+    update_account as update_account_sf1,
+    delete_account as delete_account_sf1,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -53,18 +57,29 @@ def bridge_server2_to_server1():
             logger.info("Forwarded to Server1, status=%s", resp.status)
             channel_dest.close()
 
-            # Save to System 1's database so it appears in NSPS_SF1's account list (created via gRPC event)
+            # Save to System 1's database (create, update, or delete)
             full = data.get("FullData", {})
-            insert_account_sf1(
-                full.get("Id", ""),
-                full.get("FirstName", ""),
-                full.get("LastName", ""),
-                full.get("Email", ""),
-                full.get("Phone", ""),
-                "NPC_SF2",
-                created_by="grpc",
-            )
-            logger.info("Saved to NSPS_SF1 database")
+            change_type = header.get("changeType", "CREATE")
+            aid = full.get("Id") or (header.get("recordIds") or [None])[0]
+            first = full.get("FirstName", "")
+            last = full.get("LastName", "")
+            email = full.get("Email", "")
+            phone = full.get("Phone", "")
+
+            if change_type == "DELETE":
+                if aid:
+                    delete_account_sf1(aid)
+                    logger.info("Deleted from NSPS_SF1 database: %s", aid)
+            elif change_type == "UPDATE":
+                update_account_sf1(aid, first, last, email, phone, source_system="NPC_SF2", created_by="grpc")
+                logger.info("Updated NSPS_SF1 database for %s", aid)
+            else:
+                insert_account_sf1(
+                    aid, first, last, email, phone,
+                    "NPC_SF2",
+                    created_by="grpc",
+                )
+                logger.info("Saved to NSPS_SF1 database")
 
         channel_src.close()
     except grpc.RpcError as e:

@@ -25,16 +25,15 @@ def _publish(payload_dict):
     return resp
 
 
-def send_account(account_id, first, last, email, phone):
-    """Publish one Contact CDC event to Server2 (used by app.py on create)."""
-    payload = {
+def _payload(account_id, first, last, email, phone, change_type):
+    return {
         "eventId": f"evt_contact_{account_id[:8]}",
         "ChangeEventHeader": {
             "entityName": "Contact",
-            "changeType": "CREATE",
+            "changeType": change_type,
             "recordIds": [account_id],
             "commitTimestamp": datetime.now(UTC).isoformat(),
-            "changedFields": ["FirstName", "LastName", "Email"],
+            "changedFields": ["FirstName", "LastName", "Email", "Phone"],
             "sourceSystem": SYSTEM_NAME,
         },
         "FullData": {
@@ -46,5 +45,34 @@ def send_account(account_id, first, last, email, phone):
             "LastModifiedDate": datetime.now(UTC).isoformat(),
         },
     }
+
+
+def send_account(account_id, first, last, email, phone):
+    """Publish one Contact CDC event to Server2 (used by app.py on create)."""
+    payload = _payload(account_id, first, last, email, phone, "CREATE")
     resp = _publish(payload)
     print("Publish response:", resp.status)
+
+
+def send_account_update(account_id, first, last, email, phone):
+    """Publish Contact UPDATE event to Server2 (used by app.py on edit save)."""
+    payload = _payload(account_id, first, last, email, phone, "UPDATE")
+    resp = _publish(payload)
+    print("Publish update response:", resp.status)
+
+
+def send_account_delete(account_id):
+    """Publish Contact DELETE event to Server2 (used by app.py on delete)."""
+    payload = {
+        "eventId": f"evt_del_contact_{account_id[:8]}",
+        "ChangeEventHeader": {
+            "entityName": "Contact",
+            "changeType": "DELETE",
+            "recordIds": [account_id],
+            "commitTimestamp": datetime.now(UTC).isoformat(),
+            "sourceSystem": SYSTEM_NAME,
+        },
+        "FullData": {},
+    }
+    resp = _publish(payload)
+    print("Publish delete response:", resp.status)

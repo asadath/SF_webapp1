@@ -52,3 +52,30 @@ def insert_account(account_id, first, last, email, phone, source, created_by="da
 def get_accounts():
     cursor.execute("SELECT * FROM accounts")
     return cursor.fetchall()
+
+
+def get_account(account_id):
+    cursor.execute("SELECT * FROM accounts WHERE account_id = ?", (account_id,))
+    row = cursor.fetchone()
+    return row
+
+
+def update_account(account_id, first, last, email, phone, source_system=None, created_by=None):
+    if source_system is not None and created_by is not None:
+        cursor.execute("""
+        UPDATE accounts
+        SET first_name = ?, last_name = ?, email = ?, phone = ?, source_system = ?, created_by = ?
+        WHERE account_id = ?
+        """, (first, last, email, phone, source_system, created_by, account_id))
+    else:
+        cursor.execute("""
+        UPDATE accounts
+        SET first_name = ?, last_name = ?, email = ?, phone = ?
+        WHERE account_id = ?
+        """, (first, last, email, phone, account_id))
+    conn.commit()
+
+
+def delete_account(account_id):
+    cursor.execute("DELETE FROM accounts WHERE account_id = ?", (account_id,))
+    conn.commit()

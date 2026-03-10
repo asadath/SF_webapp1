@@ -16,12 +16,11 @@ except ImportError:
     _version_not_supported = True
 
 if _version_not_supported:
-    raise RuntimeError(
-        f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in proto/pubsub_pb2_grpc.py depends on'
-        + f' grpcio>={GRPC_GENERATED_VERSION}.'
-        + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
-        + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
+    warnings.warn(
+        f'grpc package is {GRPC_VERSION}; generated code targets grpcio>={GRPC_GENERATED_VERSION}. '
+        'Consider upgrading grpcio or regenerating with grpcio-tools to match.',
+        RuntimeWarning,
+        stacklevel=2,
     )
 
 
@@ -38,13 +37,11 @@ class PubSubStub(object):
         self.Publish = channel.unary_unary(
                 '/pubsub.PubSub/Publish',
                 request_serializer=proto_dot_pubsub__pb2.PublishRequest.SerializeToString,
-                response_deserializer=proto_dot_pubsub__pb2.PublishResponse.FromString,
-                _registered_method=True)
+                response_deserializer=proto_dot_pubsub__pb2.PublishResponse.FromString)
         self.Subscribe = channel.unary_stream(
                 '/pubsub.PubSub/Subscribe',
                 request_serializer=proto_dot_pubsub__pb2.SubscribeRequest.SerializeToString,
-                response_deserializer=proto_dot_pubsub__pb2.Event.FromString,
-                _registered_method=True)
+                response_deserializer=proto_dot_pubsub__pb2.Event.FromString)
 
 
 class PubSubServicer(object):
@@ -80,7 +77,8 @@ def add_PubSubServicer_to_server(servicer, server):
     generic_handler = grpc.method_handlers_generic_handler(
             'pubsub.PubSub', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('pubsub.PubSub', rpc_method_handlers)
+    if hasattr(server, 'add_registered_method_handlers'):
+        server.add_registered_method_handlers('pubsub.PubSub', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
@@ -112,8 +110,7 @@ class PubSub(object):
             compression,
             wait_for_ready,
             timeout,
-            metadata,
-            _registered_method=True)
+            metadata)
 
     @staticmethod
     def Subscribe(request,
@@ -139,5 +136,4 @@ class PubSub(object):
             compression,
             wait_for_ready,
             timeout,
-            metadata,
-            _registered_method=True)
+            metadata)
